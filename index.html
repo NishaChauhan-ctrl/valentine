@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Will you be my Valentine?</title>
+  <title>Stay stuck with me?</title>
 
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
@@ -71,10 +71,11 @@
     }
 
     h1 {
-      font-size: clamp(24px, 5vw, 42px);
+      font-size: clamp(22px, 4.5vw, 38px);
       margin: 12px 0 20px;
       color: #333;
       font-weight: 800;
+      line-height: 1.3;
     }
 
     .button-zone {
@@ -118,10 +119,11 @@
 
     .hint {
       margin-top: 15px;
-      font-size: 14px;
-      font-weight: 500;
-      color: #666;
-      opacity: 0.8;
+      font-size: 15px;
+      font-weight: 600;
+      color: #ff3b7a;
+      min-height: 24px;
+      transition: opacity 0.2s ease;
     }
 
     .result {
@@ -173,17 +175,17 @@
       <path d="M190 144 C186 144 182 148 182 152 C182 160 190 164 190 170 C190 164 198 160 198 152 C198 148 194 144 190 144Z" fill="#ff7aa2"/>
     </svg>
 
-    <h1>Nonuuuu, will you be my valentine?</h1>
+    <h1>Kucchu Pucchu, would you love to stay stuck with me forever? 🧲❤️</h1>
 
     <section class="button-zone" id="zone">
-      <button id="yesBtn">Yes</button>
+      <button id="yesBtn">Yes!</button>
       <button id="noBtn" aria-hidden="true">No</button>
     </section>
 
-    <div class="hint" id="hint">“No” seems a bit shy 😈</div>
+    <div class="hint" id="hint">Pro tip: "No" is allergic to cursor clicks 😜</div>
 
     <section class="result" id="result">
-      <h2>YAY! 🎉</h2>
+      <h2>BEST DECISION EVER! 🎉💍</h2>
       <img class="fireworks" src="https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif" alt="Celebration Fireworks" />
     </section>
   </main>
@@ -195,6 +197,17 @@
     const result = document.getElementById("result");
     const hint = document.getElementById("hint");
     const confettiCanvas = document.getElementById("confettiCanvas");
+
+    const quirkyHints = [
+      "Nice try! That button has zero stamina 🏃‍♂️💨",
+      "Error 404: 'No' option unavailable 🚫",
+      "You're stuck with me, accept your destiny! ✨",
+      "Are your fingers slipping, or is 'Yes' just looking extra fine? 😏",
+      "I put superglue on the 'Yes' button anyway! 🧪",
+      "The universe has already chosen for you 🌌",
+      "Resistance is futile, Kucchu Pucchu! 🛸",
+      "Look how big 'Yes' is getting... just hit it! 👀"
+    ];
 
     function resizeCanvas() {
       const dpr = window.devicePixelRatio || 1;
@@ -220,6 +233,12 @@
     }
 
     let yesScale = 1;
+    let hintIndex = 0;
+
+    function updateQuirkyHint() {
+      hint.innerText = quirkyHints[hintIndex];
+      hintIndex = (hintIndex + 1) % quirkyHints.length;
+    }
 
     function moveNo(mouseX, mouseY) {
       const zoneRect = zone.getBoundingClientRect();
@@ -245,6 +264,8 @@
 
       yesScale = Math.min(3, yesScale + 0.15);
       yesBtn.style.transform = `translateY(-50%) scale(${yesScale})`;
+
+      updateQuirkyHint();
     }
 
     zone.addEventListener("pointermove", (e) => {
