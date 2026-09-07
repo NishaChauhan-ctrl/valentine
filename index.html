@@ -27,6 +27,22 @@
       font-family: system-ui, -apple-system, sans-serif;
       overflow: hidden;
       padding: 16px;
+      cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" style="font-size:24px"><text y="24">🧲</text></svg>'), auto;
+    }
+
+    /* FLOATING BACKGROUND EMOJIS */
+    .bg-emoji {
+      position: fixed;
+      font-size: 24px;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.4;
+      animation: float 6s infinite ease-in-out;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-30px) rotate(20deg); }
     }
 
     #confettiCanvas {
@@ -58,7 +74,6 @@
       filter: drop-shadow(0 10px 14px rgba(0,0,0,.1));
     }
 
-    /* HEARTBEAT ANIMATION */
     #mainHeart {
       transform-origin: center;
       transform-box: fill-box;
@@ -117,7 +132,7 @@
       transform: translateY(-50%);
       background: #e5e7eb;
       color: #374151;
-      transition: left 0.2s ease-out, top 0.2s ease-out;
+      transition: left 0.2s ease-out, top 0.2s ease-out, transform 0.2s ease;
     }
 
     .preview-box {
@@ -210,6 +225,27 @@
       color: white;
     }
 
+    /* LOADING SCREEN */
+    .loading-page {
+      display: none;
+      margin-top: 20px;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid #ffeef6;
+      border-top: 5px solid var(--yes);
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
     /* RESULT & SIDE-EYE SECTIONS */
     .result, .sideeye-page {
       display: none;
@@ -239,6 +275,12 @@
 </head>
 
 <body>
+  <!-- FLOATING EMOJIS -->
+  <div class="bg-emoji" style="top:10%; left:8%; animation-delay:0s;">🧲</div>
+  <div class="bg-emoji" style="top:20%; right:12%; animation-delay:1s;">💖</div>
+  <div class="bg-emoji" style="bottom:15%; left:15%; animation-delay:2s;">🙈</div>
+  <div class="bg-emoji" style="bottom:25%; right:8%; animation-delay:1.5s;">✨</div>
+
   <canvas id="confettiCanvas"></canvas>
 
   <main class="card">
@@ -270,6 +312,7 @@
         <button id="noBtn" aria-hidden="true">No</button>
       </section>
 
+      <!-- Hover GIF -->
       <div class="preview-box">
         <img id="hoverGif" class="preview-gif" src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExanVpZnNoenhub2Vrc2V3MmpleDNpam05NjVmenMyYzY1c3VmOHF1bCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/BjHIjM2YFC3rEUaMrw/giphy.gif" alt="Hover reaction" />
       </div>
@@ -280,6 +323,13 @@
       </div>
     </div>
 
+    <!-- FAKE LOADING PAGE -->
+    <section class="loading-page" id="loadingPage">
+      <div class="spinner"></div>
+      <h3 id="loadingText" style="color:#555;">Consulting NASA satellites... 📡</h3>
+    </section>
+
+    <!-- SIDE-EYE PAGE REDIRECT -->
     <section class="sideeye-page" id="sideeyePage">
       <h2>Nice try... ZERO reasons found! 🤨👀</h2>
       <img class="celebration-gif" src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExamV0aGhzMWplOHZweXNmMGI4cXlzMnNuanFxMnN4MHNxdWI0Njl1NSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/yyq0WXMv720OcpZvmA/giphy.gif" alt="Official reasons page reaction" />
@@ -288,12 +338,14 @@
       </div>
     </section>
 
+    <!-- Click Result GIF -->
     <section class="result" id="result">
       <h2>YAYYYY! BEST DECISION EVER! 🎉🙌</h2>
       <img class="celebration-gif" src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZjRta2h1NjkzZWRha2JoZm1icDBoZWRyaWVqMGtrbXg4NGc2dmllaSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/DffShiJ47fPqM/giphy.gif" alt="Celebration reaction" />
     </section>
   </main>
 
+  <!-- MULTI-STAGE FUNNY MODAL -->
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal-content">
       <h3 id="modalTitle">Wait... why do you need a reason? 🤨</h3>
@@ -315,15 +367,65 @@
     const hoverGif = document.getElementById("hoverGif");
     const confettiCanvas = document.getElementById("confettiCanvas");
 
-    // Modal & Side-eye Elements
+    // Modal & Additional Elements
     const openModal = document.getElementById("openModal");
     const cancelModal = document.getElementById("cancelModal");
     const modalOverlay = document.getElementById("modalOverlay");
     const nextModal = document.getElementById("nextModal");
     const modalTitle = document.getElementById("modalTitle");
     const modalBody = document.getElementById("modalBody");
+    const loadingPage = document.getElementById("loadingPage");
+    const loadingText = document.getElementById("loadingText");
     const sideeyePage = document.getElementById("sideeyePage");
     const backToQuiz = document.getElementById("backToQuiz");
+
+    // WEB AUDIO SOUND EFFECTS (No external files required!)
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playSwoosh() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.15);
+    }
+
+    function playBuzzer() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.25);
+    }
+
+    function playFanfare() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const notes = [261.63, 329.63, 392.00, 523.25];
+      notes.forEach((freq, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.1);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime + idx * 0.1);
+        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + idx * 0.1 + 0.3);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + idx * 0.1);
+        osc.stop(audioCtx.currentTime + idx * 0.1 + 0.3);
+      });
+    }
 
     const quirkyHints = [
       "Nice try! That button has zero stamina 🏃‍♂️💨",
@@ -334,6 +436,17 @@
       "The universe has already chosen for you 🌌",
       "Resistance is futile, kucchu pucchu! 🛸",
       "Look how big 'Yes' is getting... just hit it! 👀"
+    ];
+
+    const noLabels = [
+      "No",
+      "Are you sure?",
+      "Wrong button!",
+      "Stop chasing me!",
+      "Just click YES!",
+      "Nice try! 😜",
+      "Gotta be faster!",
+      "Bye bye! 💥"
     ];
 
     function resizeCanvas() {
@@ -360,6 +473,7 @@
     }
 
     let yesScale = 1;
+    let dodgeCount = 0;
     let hintIndex = 0;
 
     function updateQuirkyHint() {
@@ -368,6 +482,18 @@
     }
 
     function moveNo(mouseX, mouseY) {
+      dodgeCount++;
+      playSwoosh();
+
+      // VANISHING ACT AFTER 8 DODGES
+      if (dodgeCount >= 8) {
+        noBtn.style.display = "none";
+        hint.innerText = "The 'No' button gave up and left! 😂 Only YES remains!";
+        return;
+      }
+
+      noBtn.innerText = noLabels[dodgeCount % noLabels.length];
+
       const zoneRect = zone.getBoundingClientRect();
       const btnRect = noBtn.getBoundingClientRect();
       const btnCenterX = btnRect.left + btnRect.width / 2;
@@ -387,7 +513,11 @@
 
       noBtn.style.left = nextLeft + "px";
       noBtn.style.top = nextTop + "px";
-      noBtn.style.transform = "none";
+      
+      // ROTATE AND SHRINK SLIGHTLY
+      const currentScale = Math.max(0.6, 1 - dodgeCount * 0.05);
+      const randomRotate = (Math.random() - 0.5) * 40;
+      noBtn.style.transform = `scale(${currentScale}) rotate(${randomRotate}deg)`;
 
       yesScale = Math.min(3, yesScale + 0.15);
       yesBtn.style.transform = `translateY(-50%) scale(${yesScale})`;
@@ -396,6 +526,7 @@
     }
 
     zone.addEventListener("pointermove", (e) => {
+      if (noBtn.style.display === "none") return;
       const btnRect = noBtn.getBoundingClientRect();
       const dist = Math.hypot((btnRect.left + btnRect.width / 2) - e.clientX, (btnRect.top + btnRect.height / 2) - e.clientY);
       if (dist < 100) moveNo(e.clientX, e.clientY);
@@ -413,8 +544,10 @@
     noBtn.addEventListener("click", (e) => e.preventDefault());
 
     yesBtn.addEventListener("click", () => {
+      playFanfare();
       quizContent.style.display = "none";
       sideeyePage.style.display = "none";
+      loadingPage.style.display = "none";
       result.style.display = "block";
       fireConfetti();
     });
@@ -447,6 +580,7 @@
     }
 
     openModal.addEventListener("click", () => {
+      playBuzzer();
       modalStep = 0;
       renderModalStage(modalStep);
       modalOverlay.style.display = "grid";
@@ -461,9 +595,19 @@
       if (modalStep < modalStages.length) {
         renderModalStage(modalStep);
       } else {
+        // TRIGGER FAKE LOADING SCREEN BEFORE SIDE-EYE PAGE
         modalOverlay.style.display = "none";
         quizContent.style.display = "none";
-        sideeyePage.style.display = "block";
+        loadingPage.style.display = "block";
+
+        setTimeout(() => {
+          loadingText.innerText = "Scanning global database for flaws... 🔍";
+        }, 1000);
+
+        setTimeout(() => {
+          loadingPage.style.display = "none";
+          sideeyePage.style.display = "block";
+        }, 2200);
       }
     });
 
