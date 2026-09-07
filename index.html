@@ -132,7 +132,7 @@
       transform: translateY(-50%);
       background: #e5e7eb;
       color: #374151;
-      transition: left 0.2s ease-out, top 0.2s ease-out, transform 0.2s ease;
+      transition: left 0.3s ease-out, top 0.3s ease-out, transform 0.2s ease;
     }
 
     .preview-box {
@@ -379,7 +379,7 @@
     const sideeyePage = document.getElementById("sideeyePage");
     const backToQuiz = document.getElementById("backToQuiz");
 
-    // WEB AUDIO SOUND EFFECTS (No external files required!)
+    // WEB AUDIO SYNTHESIZERS
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
     function playSwoosh() {
@@ -397,33 +397,73 @@
       osc.stop(audioCtx.currentTime + 0.15);
     }
 
-    function playBuzzer() {
+    // "WHY WOULD YOU CLICK THAT?" SHOCK SOUND
+    function playShockSound() {
       if (audioCtx.state === 'suspended') audioCtx.resume();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.25);
+      const now = audioCtx.currentTime;
+      
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.type = 'sawtooth';
+      osc1.frequency.setValueAtTime(600, now);
+      osc1.frequency.exponentialRampToValueAtTime(150, now + 0.35);
+      gain1.gain.setValueAtTime(0.35, now);
+      gain1.gain.linearRampToValueAtTime(0.01, now + 0.35);
+      osc1.connect(gain1);
+      gain1.connect(audioCtx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.35);
+
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.type = 'square';
+      osc2.frequency.setValueAtTime(200, now + 0.1);
+      osc2.frequency.linearRampToValueAtTime(80, now + 0.4);
+      gain2.gain.setValueAtTime(0.25, now + 0.1);
+      gain2.gain.linearRampToValueAtTime(0.01, now + 0.4);
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      osc2.start(now + 0.1);
+      osc2.stop(now + 0.4);
     }
 
-    function playFanfare() {
+    // CHEERING / RIGHT DECISION FANFARE ON "YES"
+    function playCheeringFanfare() {
       if (audioCtx.state === 'suspended') audioCtx.resume();
-      const notes = [261.63, 329.63, 392.00, 523.25];
-      notes.forEach((freq, idx) => {
+      const now = audioCtx.currentTime;
+      
+      const sequence = [
+        { note: 261.63, start: 0, duration: 0.12 },     // C4
+        { note: 329.63, start: 0.12, duration: 0.12 },  // E4
+        { note: 392.00, start: 0.24, duration: 0.12 },  // G4
+        { note: 523.25, start: 0.36, duration: 0.45 }   // C5
+      ];
+
+      sequence.forEach(({ note, start, duration }) => {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.1);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime + idx * 0.1);
-        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + idx * 0.1 + 0.3);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(note, now + start);
+        gain.gain.setValueAtTime(0.4, now + start);
+        gain.gain.linearRampToValueAtTime(0.01, now + start + duration);
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-        osc.start(audioCtx.currentTime + idx * 0.1);
-        osc.stop(audioCtx.currentTime + idx * 0.1 + 0.3);
+        osc.start(now + start);
+        osc.stop(now + start + duration);
+      });
+
+      // Celebration chord burst
+      [523.25, 659.25, 783.99].forEach(freq => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + 0.36);
+        gain.gain.setValueAtTime(0.25, now + 0.36);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.9);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + 0.36);
+        osc.stop(now + 0.9);
       });
     }
 
@@ -475,6 +515,7 @@
     let yesScale = 1;
     let dodgeCount = 0;
     let hintIndex = 0;
+    let lastDodgeTime = 0;
 
     function updateQuirkyHint() {
       hint.innerText = quirkyHints[hintIndex];
@@ -482,6 +523,11 @@
     }
 
     function moveNo(mouseX, mouseY) {
+      const now = Date.now();
+      // PAUSE / COOLDOWN: Wait 350ms before allowing another reaction move
+      if (now - lastDodgeTime < 350) return;
+      lastDodgeTime = now;
+
       dodgeCount++;
       playSwoosh();
 
@@ -514,7 +560,6 @@
       noBtn.style.left = nextLeft + "px";
       noBtn.style.top = nextTop + "px";
       
-      // ROTATE AND SHRINK SLIGHTLY
       const currentScale = Math.max(0.6, 1 - dodgeCount * 0.05);
       const randomRotate = (Math.random() - 0.5) * 40;
       noBtn.style.transform = `scale(${currentScale}) rotate(${randomRotate}deg)`;
@@ -544,7 +589,7 @@
     noBtn.addEventListener("click", (e) => e.preventDefault());
 
     yesBtn.addEventListener("click", () => {
-      playFanfare();
+      playCheeringFanfare();
       quizContent.style.display = "none";
       sideeyePage.style.display = "none";
       loadingPage.style.display = "none";
@@ -580,7 +625,7 @@
     }
 
     openModal.addEventListener("click", () => {
-      playBuzzer();
+      playShockSound();
       modalStep = 0;
       renderModalStage(modalStep);
       modalOverlay.style.display = "grid";
@@ -595,7 +640,6 @@
       if (modalStep < modalStages.length) {
         renderModalStage(modalStep);
       } else {
-        // TRIGGER FAKE LOADING SCREEN BEFORE SIDE-EYE PAGE
         modalOverlay.style.display = "none";
         quizContent.style.display = "none";
         loadingPage.style.display = "block";
